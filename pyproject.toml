@@ -12,7 +12,6 @@ SciPy = "^1.11.4"
 matplotlib = "^3.8.2"
 pandas = "^2.1.4"
 seaborn = "^0.13.1"
-torch = "^2.1.2"
 torchaudio = "^2.1.2"
 openpyxl = "^3.1.2"
 soundfile = "^0.12.1"
@@ -20,6 +19,12 @@ librosa = "^0.10.1"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"
+
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu118"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core"]
