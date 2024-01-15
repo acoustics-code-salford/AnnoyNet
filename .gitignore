@@ -4,3 +4,5 @@
 Stimuli/*
 melspecs/*
 .venv
+*.yaml
+__pycache__/

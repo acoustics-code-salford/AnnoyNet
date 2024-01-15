@@ -1,4 +1,6 @@
-from torch.utils.data import Dataset
+from pytorch_lightning.utilities.types import TRAIN_DATALOADERS
+from torch.utils.data import Dataset, DataLoader, random_split
+import pytorch_lightning as pl
 import torch
 import os
 import glob
@@ -36,3 +38,16 @@ class UAVNoiseAffect(Dataset):
             x = self.transforms(x)
 
         return x, y
+
+
+class UAVNoiseDataModule(pl.LightningDataModule):
+
+    def setup(self, stage):
+        self.dataset = UAVNoiseAffect()
+        self.train_data, self.val_data = random_split(self.dataset, [0.8, 0.2])
+
+    def train_dataloader(self):
+        return DataLoader(self.train_data, 1, num_workers=19)
+    
+    def val_dataloader(self):
+        return DataLoader(self.val_data, 1, num_workers=19)

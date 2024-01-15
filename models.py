@@ -1,8 +1,9 @@
 import torch
 from torch import nn
+import pytorch_lightning as pl
 
 
-class VGGBinaural(nn.Module):
+class VGGBinaural(pl.LightningModule):
     '''
     Modified version of VGG-like network described in FSD50K paper
     This version collapses the time dimension so that the global pooling 
@@ -56,7 +57,6 @@ class VGGBinaural(nn.Module):
             nn.Linear(128, 3)
         )
 
-
     def forward(self, x):
 
         x = self.conv_group1(x)
@@ -76,3 +76,27 @@ class VGGBinaural(nn.Module):
         x = self.fc_layers(x)
 
         return torch.sigmoid(x)
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
+    
+    def mse_loss(self, y_pred, y_true):
+        loss = nn.MSELoss()
+        return loss(y_pred, y_true)
+    
+    def training_step(self, train_batch):
+        x, y_true = train_batch
+        y_pred = self.forward(x)
+        loss = self.mse_loss(y_pred, y_true)
+        self.log('train_loss', loss)
+
+    def validation_step(self, val_batch):
+        x, y_true = val_batch
+        y_pred = self.forward(x)
+        loss = self.mse_loss(y_pred, y_true)
+        self.log('val_loss', loss)
+
+
+# trainer = pl.Trainer()
+# trainer.fit(VGGBinaural(), datamodule=UAVNoiseDataModule())
