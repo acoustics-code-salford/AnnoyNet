@@ -1,8 +1,10 @@
 *.ipynb
 *.xlsx
 *.csv
-Stimuli/*
+raw_data/*
 melspecs/*
 .venv
 *.yaml
-__pycache__/
+__pycache__/*
+*.cypython-311.pyc
+tb_logs/*
