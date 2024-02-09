@@ -85,14 +85,17 @@ class DroneMFCCAffectPeak(torch.utils.data.Dataset):
         x = self.transform(x)
 
         # select peak frame
-        max_0 = torch.where(x[0] == torch.max(x[0]))
-        x = x[:, max_0]
+        max_0 = torch.where(x[0] == torch.max(x[0]))[0][0]
+        
+        # mfccs from peak frame +- 3 seconds(ish)
+        x = x[:, max_0-12:max_0+12]
 
         index_str = (
             os.path.basename(
             filepath).split('.')[0]
             .split('_C')
         )[0]
-        y = self.targets.loc[index_str].values
+        y = torch.tensor(self.targets.loc[index_str].values,
+                         dtype=torch.float32)
 
         return x, y

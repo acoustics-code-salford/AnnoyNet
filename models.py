@@ -100,3 +100,15 @@ class VGGBinaural(pl.LightningModule):
 
 # trainer = pl.Trainer()
 # trainer.fit(VGGBinaural(), datamodule=UAVNoiseDataModule())
+        
+
+class SimpleDenseLSTM(nn.Module):
+    def __init__(self, input_size, out_size=3, hidden_size=128):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.dense = nn.Linear(hidden_size, out_size)
+
+    def forward(self, input):
+        outputs, _ = self.lstm(input)
+        outputs = self.dense(outputs)
+        return outputs
