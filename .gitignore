@@ -8,3 +8,6 @@ melspecs/*
 __pycache__/*
 *.cypython-311.pyc
 tb_logs/*
+*.ckpt
+*.txt
+*.pyc
