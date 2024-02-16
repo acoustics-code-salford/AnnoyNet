@@ -6,8 +6,10 @@ melspecs/*
 .venv
 *.yaml
 __pycache__/*
-*.cypython-311.pyc
+*cpython-311*
 tb_logs/*
 *.ckpt
 *.txt
 *.pyc
+runs/*
+*.pt
