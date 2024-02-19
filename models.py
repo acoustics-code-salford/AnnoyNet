@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import pytorch_lightning as pl
 
 
 class SimpleDenseLSTM(nn.Module):
