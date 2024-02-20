@@ -92,6 +92,8 @@ def training_loop(n_epochs,
     early_stopping = EarlyStopping(patience=patience,
                                    verbose=True,
                                    delta=.00001)
+    
+    model.train()
 
     for epoch in range(1, n_epochs + 1):
         for x, y_true in dataloader:
