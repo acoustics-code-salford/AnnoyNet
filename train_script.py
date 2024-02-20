@@ -1,11 +1,5 @@
 import torch
-import glob, os
 import numpy as np
-import pandas as pd
-import torchaudio, torchvision
-
-from torch import nn
-from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -83,52 +77,64 @@ def training_loop(n_epochs,
                   optimiser,
                   model,
                   loss_fn,
-                  dataloader,
+                  train_dataloader,
+                  val_dataloader,
                   patience=20,
                   writer=SummaryWriter()):
 
     train_losses = []
+    val_losses = []
     avg_train_losses = []
+    avg_val_losses = []
     early_stopping = EarlyStopping(patience=patience,
                                    verbose=True,
                                    delta=.00001)
     
-    model.train()
+    if torch.cuda.is_available():
+        model = model.to('cuda')
 
     for epoch in range(1, n_epochs + 1):
-        for x, y_true in dataloader:
+        
+        model.train()
+        for x, y_true in train_dataloader:
             if torch.cuda.is_available():
                 x = x.to('cuda')
                 y_true = y_true.to('cuda')
-                model = model.to('cuda')
+
+            y_pred = model(x)  # forwards pass
+            loss = loss_fn(y_pred, y_true)  # calculate loss
+            optimiser.zero_grad()  # set gradients to zero
+            loss.backward()  # backwards pass
+            optimiser.step()  # update model parameters
+            train_losses.append(loss.item())
+        
+        model.eval()
+        for x, y_true in val_dataloader:
+            
+            if torch.cuda.is_available():
+                x = x.to('cuda')
+                y_true = y_true.to('cuda')
 
             y_pred = model(x) # forwards pass
-            loss_train = loss_fn(y_pred, y_true) # calculate loss
-            optimiser.zero_grad() # set gradients to zero
-            loss_train.backward() # backwards pass
-            optimiser.step() # update model parameters
-            train_losses.append(loss_train.item())
+            val_loss = loss_fn(y_pred, y_true) # calculate loss
+            val_losses.append(val_loss.item())
 
         train_loss = np.average(train_losses)
+        val_loss = np.average(val_losses)
         avg_train_losses.append(train_loss)
-        train_losses = [] # clear for next epoch
+        avg_val_losses.append(val_loss)
+        train_losses = []  # clear for next epoch
+        val_losses = []
 
-        writer.add_scalar("Loss/train", train_loss, epoch) # add to tensorboard
+        # add to tensorboard
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/val', val_loss, epoch)
         print(f'Epoch {epoch}: ', end='')
                 #   f" Validation loss {loss_val.item():.4f}")
 
-        early_stopping(train_loss, model)
+        early_stopping(val_loss, model)
         if early_stopping.early_stop:
             print("Early stopping")
             break
 
     model.load_state_dict(torch.load('checkpoint.pt'))
-
-# data = DroneMFCCAffectPeak()
-# dataloader = DataLoader(data, batch_size=16, drop_last=True)
-# model = SimpleDenseLSTM(20, 124, 2, 3)
-# optimiser = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-# loss_fn = nn.MSELoss()
-
-# # run the training
-# training_loop(100, optimiser, model, loss_fn, dataloader)

@@ -55,9 +55,9 @@ class DronePeakMFCCAnnoyance(torch.utils.data.Dataset):
 
         index_str = os.path.basename(filepath)
         y = (
-            torch.tensor(
+            (torch.tensor(
                 self.targets.loc[index_str].values[0],
-                dtype=torch.float32) / 10
+                dtype=torch.float32) / 7) - 0.5  # scale += 0.5
         )  # scale between 0 and 1
 
         return x, y.repeat(len(x), 1)  # repeat y across frames
@@ -69,8 +69,8 @@ class DronePeakMFCCAffect(torch.utils.data.Dataset):
                  input_path='raw_data/',
                  targets_file='mean_ratings.csv'):
 
-        self.file_list = glob.glob(f'{input_path}*')
         self.targets = pd.read_csv(targets_file, index_col=0)
+        self.file_list = [f'{input_path}{f}.wav' for f in self.targets.index]
         self.resample = torchaudio.transforms.Resample(48_000, 16_000)
         self.mfcc = torchaudio.transforms.MFCC(
             n_mfcc=20,
