@@ -73,14 +73,16 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def training_loop(n_epochs,
-                  optimiser,
-                  model,
-                  loss_fn,
-                  train_dataloader,
-                  val_dataloader,
-                  patience=20,
-                  writer=SummaryWriter()):
+def training_loop(
+        n_epochs,
+        optimiser,
+        model,
+        loss_fn,
+        train_dataloader,
+        val_dataloader,
+        patience=20,
+        writer=SummaryWriter()
+):
 
     train_losses = []
     val_losses = []
@@ -129,6 +131,12 @@ def training_loop(n_epochs,
         # add to tensorboard
         writer.add_scalar('Loss/train', train_loss, epoch)
         writer.add_scalar('Loss/val', val_loss, epoch)
+        # writer.add_scalars(
+        #     'Run',
+        #     {'Train Loss': train_loss,
+        #      'Validation Loss': val_loss}, 
+        #      epoch
+        # )
         print(f'Epoch {epoch}: ', end='')
                 #   f" Validation loss {loss_val.item():.4f}")
 
@@ -138,3 +146,31 @@ def training_loop(n_epochs,
             break
 
     model.load_state_dict(torch.load('checkpoint.pt'))
+
+
+def test_model(model, test_dataloader, loss_fn, metric):
+
+    model.eval()
+
+    loss_aggr = 0.0
+    metric_scores = torch.tensor(())
+
+    with torch.no_grad():
+        for x, y_true in test_dataloader:
+            if torch.cuda.is_available():
+                x = x.to('cuda')
+                y_true = y_true.to('cuda')
+                model = model.to('cuda')
+                metric_scores = metric_scores.to('cuda')
+
+            y_pred = model(x)
+            loss = loss_fn(y_pred, y_true)
+            loss_aggr += loss.item()
+
+            score = metric(y_pred, y_true).mean()
+            metric_scores = torch.cat((metric_scores, score.reshape(1)))
+
+    loss_aggr /= len(test_dataloader)
+    metric_aggr = metric_scores.sum() / len(test_dataloader)
+
+    return metric_aggr.item(), loss_aggr

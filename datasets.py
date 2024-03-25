@@ -6,11 +6,60 @@ import pandas as pd
 import torchaudio, torchvision
 
 
+class MomentaryAnnoyance(torch.utils.data.Dataset):
+    def __init__(self,
+                 input_path='audio_1sec/',
+                 targets_file='all_annoyances.csv',
+                 train=False,
+                 test=False):
+
+        self.input_path = input_path
+        self.targets = pd.read_csv(targets_file, index_col=0)
+
+        if test:
+            self.targets = \
+                self.targets[self.targets['Dataset'] == 'Michael']
+        elif train:
+            self.targets = self.targets.drop(
+                self.targets[self.targets['Dataset'] == 'Michael'].index)
+
+        self.file_list = self.targets.index
+        self.resample = torchaudio.transforms.Resample(48_000, 16_000)
+        self.mfcc = torchaudio.transforms.MFCC(
+            n_mfcc=20,
+            melkwargs={
+                "n_fft": 400,
+                "hop_length": 4096,
+                "n_mels": 20,
+                "center": False
+            }
+        )
+        self.transform = torchvision.transforms.Compose([
+            self.resample, self.mfcc])
+        
+    def __len__(self):
+        return len(self.targets)
+
+    def __getitem__(self, index):
+        filename = self.file_list[index]
+        x, _ = torchaudio.load(self.input_path + filename)
+        x = x.sum(0)
+        x = self.transform(x)
+
+        y = ((torch.tensor(
+            self.targets.loc[filename].values[0],
+            dtype=torch.float32) / 10) - 0.5  # scale += 0.5
+        )  # scale between 0 and 1
+
+        return x.T, y
+
+
 class DronePeakMFCCAnnoyance(torch.utils.data.Dataset):
 
     def __init__(self,
                  input_path='raw_data/',
-                 targets_file='mean_annoyances.csv'):
+                 targets_file='mean_annoyances.csv',
+                 segment_seconds=6):
 
         self.file_list = glob.glob(f'{input_path}*')
         self.targets = pd.read_csv(targets_file, index_col=0)
@@ -19,17 +68,23 @@ class DronePeakMFCCAnnoyance(torch.utils.data.Dataset):
             n_mfcc=20,
             melkwargs={
                 "n_fft": 400,
-                "hop_length": 4096, # 1/5th second
+                "hop_length": 4096,
                 "n_mels": 20,
                 "center": False
             }
         )
         self.transform = torchvision.transforms.Compose([
             self.resample, self.mfcc])
+        
+        # calculate how many frames for specified length of segment
+        self.n_frames = int((segment_seconds // (4096/16000)) // 2)
+        if self.n_frames < 1:
+            raise ValueError('Specified segment length too short')
 
         # silly trick to root out invalid (too short) clips
         self._use_valid_idx = False
-        self.valid_idx = [i for i, (x, _) in enumerate(self) if len(x) == 24]
+        self.valid_idx = [i for i, (x, _) in enumerate(self) if len(x) == 
+                          self.n_frames*2]
         self._use_valid_idx = True
         # definitely not advisable for larger datasets
 
@@ -51,7 +106,7 @@ class DronePeakMFCCAnnoyance(torch.utils.data.Dataset):
         max_0 = torch.where(x[0] == torch.max(x[0]))[0][0]
 
         # mfccs from peak frame +- 3 seconds(ish)
-        x = x[:, max_0-12:max_0+12].T
+        x = x[:, max_0-self.n_frames:max_0+self.n_frames].T
 
         index_str = os.path.basename(filepath)
         y = (

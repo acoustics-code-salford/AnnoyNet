@@ -13,3 +13,4 @@ tb_logs/*
 *.pyc
 runs/*
 *.pt
+*.wav

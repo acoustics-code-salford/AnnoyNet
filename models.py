@@ -3,7 +3,13 @@ from torch import nn
 
 
 class SimpleDenseLSTM(nn.Module):
-    def __init__(self, input_size=20, hidden_size=124, num_layers=1, out_size=3):
+    def __init__(
+            self,
+            input_size=20,
+            hidden_size=124,
+            num_layers=1,
+            out_size=3
+    ):
         super().__init__()
         self.norm = nn.BatchNorm1d(input_size)
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers)
@@ -15,4 +21,4 @@ class SimpleDenseLSTM(nn.Module):
         x = x.swapaxes(1, 2)
         x, _ = self.lstm(x)
         y = self.dense(x)
-        return y
+        return y.mean(1).squeeze()
