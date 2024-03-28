@@ -15,3 +15,5 @@ runs/*
 *.pt
 *.wav
 events*
+data/*
+*.pth

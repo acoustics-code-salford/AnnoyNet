@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
 
 
 class EarlyStopping:
@@ -39,6 +39,7 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
+
     def __call__(self, val_loss, model):
 
         score = -val_loss
@@ -81,7 +82,7 @@ def training_loop(
         train_dataloader,
         val_dataloader,
         patience=20,
-        writer=SummaryWriter()
+        plot=True
 ):
 
     train_losses = []
@@ -103,7 +104,7 @@ def training_loop(
                 x = x.to('cuda')
                 y_true = y_true.to('cuda')
 
-            y_pred = model(x)  # forwards pass
+            y_pred = model(x).squeeze()  # forwards pass
             loss = loss_fn(y_pred, y_true)  # calculate loss
             optimiser.zero_grad()  # set gradients to zero
             loss.backward()  # backwards pass
@@ -117,7 +118,7 @@ def training_loop(
                 x = x.to('cuda')
                 y_true = y_true.to('cuda')
 
-            y_pred = model(x) # forwards pass
+            y_pred = model(x).squeeze() # forwards pass
             val_loss = loss_fn(y_pred, y_true) # calculate loss
             val_losses.append(val_loss.item())
 
@@ -128,24 +129,25 @@ def training_loop(
         train_losses = []  # clear for next epoch
         val_losses = []
 
-        # add to tensorboard
-        writer.add_scalar('Loss/train', train_loss, epoch)
-        writer.add_scalar('Loss/val', val_loss, epoch)
-        # writer.add_scalars(
-        #     'Run',
-        #     {'Train Loss': train_loss,
-        #      'Validation Loss': val_loss}, 
-        #      epoch
-        # )
         print(f'Epoch {epoch}: ', end='')
-                #   f" Validation loss {loss_val.item():.4f}")
-
+        last_improved = epoch
+        
         early_stopping(val_loss, model)
         if early_stopping.early_stop:
             print("Early stopping")
+            last_improved -= patience
             break
-
+    
     model.load_state_dict(torch.load('checkpoint.pt'))
+
+    if plot:
+        epochs = range(1, epoch+1)
+        plt.plot(epochs, avg_train_losses, label='Train')
+        plt.plot(epochs, avg_val_losses, label='Validation')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.axvline(last_improved, color='r', ls='--', lw=1)
+        plt.legend()
 
 
 def test_model(model, test_dataloader, loss_fn, metric):

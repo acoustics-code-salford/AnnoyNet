@@ -45,10 +45,12 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         filepath = self.file_list[index]
-        x, _ = torchaudio.load(self.input_path + filepath)
+        x, _ = torchaudio.load(filepath)
 
         # sum to mono and apply transforms
         x = x.sum(0)
         x = self.transform(x)
         y = self.targets.loc[os.path.basename(filepath)].values[0]
-        return x, y
+
+        # unsqueeze data to add channel dimension, cast target to tensor
+        return x.unsqueeze(0), torch.tensor(y).float()
