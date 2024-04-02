@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 class EarlyStopping:
     '''
-    Adapted from https://github.com/Bjarten/early-stopping-pytorch.
+    Adapted from https://github.com/Bjarten/early-stopping-pytorch
     Early stops the training if validation loss doesn't improve
     after a given patience.
     '''
@@ -74,7 +74,7 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def training_loop(
+def train_model(
         n_epochs,
         optimiser,
         model,
@@ -166,7 +166,7 @@ def test_model(model, test_dataloader, loss_fn, metric):
                 metric_scores = metric_scores.to('cuda')
 
             y_pred = model(x)
-            loss = loss_fn(y_pred, y_true)
+            loss = loss_fn(y_pred, y_true.unsqueeze(1))
             loss_aggr += loss.item()
 
             score = metric(y_pred, y_true).mean()
