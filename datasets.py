@@ -10,6 +10,7 @@ from pathlib import PurePath
 class MomentaryAnnoyance(torch.utils.data.Dataset):
     def __init__(self,
                  input_path,
+                 n_mels=100,
                  key_select=None):
 
         self.input_path = input_path
@@ -36,9 +37,11 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
         # set up transforms
         self.resample = torchaudio.transforms.Resample(48_000, 16_000)
         self.melspec = torchaudio.transforms.MelSpectrogram(
-            n_fft=512, n_mels=100)
+            n_fft=512, n_mels=n_mels)
         self.transform = torchvision.transforms.Compose([
             self.resample, self.melspec])
+        
+        self.n_mels = n_mels
         
     def __len__(self):
         return len(self.targets)
@@ -49,8 +52,14 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
 
         # sum to mono and apply transforms
         x = x.sum(0)
-        x = self.transform(x)
-        y = self.targets.loc[os.path.basename(filepath)].values[0]
+        x = self.transform(x).T
+        # zero-pad if less than 376 frames (6 seconds)
+        x = torch.concatenate((x, torch.zeros((376 - len(x), self.n_mels)))).T
+        # unsqueeze data to add channel dimension
+        x = x.unsqueeze(0)
 
-        # unsqueeze data to add channel dimension, cast target to tensor
-        return x.unsqueeze(0), torch.tensor(y).float()
+        # cast target to tensor
+        y = self.targets.loc[os.path.basename(filepath)].values[0]
+        y = torch.tensor(y).float()
+
+        return x, y
