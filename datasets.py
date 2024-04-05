@@ -10,8 +10,8 @@ from pathlib import PurePath
 class MomentaryAnnoyance(torch.utils.data.Dataset):
     def __init__(self,
                  input_path,
-                 n_mels=100,
-                 key_select=None):
+                 key_select=None,
+                 n_mels=100):
 
         self.input_path = input_path
 
