@@ -25,7 +25,7 @@ def outdim(n, n_layers=1, conv_kernel=3, pool_kernel=2):
         n = ((((n - conv_kernel) + 1) - pool_kernel) // pool_kernel) + 1
     else:
         for i in range(n_layers):
-            n = outdim(n)
+            n = outdim(n, 1, conv_kernel, pool_kernel)
     return n
 
 

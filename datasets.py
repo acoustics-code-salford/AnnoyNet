@@ -12,9 +12,13 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
                  input_path,
                  key_select=None,
                  n_fft=512,
+                 hop_length=None,
                  n_mels=100,
                  fs=16_000):
 
+        if not hop_length:
+            hop_length = n_fft // 2
+        
         self.input_path = input_path
 
         # load metadata into dict
@@ -39,12 +43,12 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
         # set up transforms
         self.resample = torchaudio.transforms.Resample(48_000, fs)
         self.melspec = torchaudio.transforms.MelSpectrogram(
-            n_fft=n_fft, n_mels=n_mels)
+            n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
         self.transform = torchvision.transforms.Compose([
             self.resample, self.melspec])
         
         self.n_mels = n_mels
-        self.n_time_frames = int(2 / n_fft * 6 * fs + 1)  # 6 seconds
+        self.n_time_frames = int(1 / hop_length * 6 * fs + 1)  # 6 seconds
         
     def __len__(self):
         return len(self.targets)

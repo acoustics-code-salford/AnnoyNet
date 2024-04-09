@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -152,29 +153,34 @@ def train_model(
         plt.legend()
 
 
-def test_model(model, test_dataloader, loss_fn, metric):
+def test_model(model, dataloader):
 
     model.eval()
 
-    loss_aggr = 0.0
-    metric_scores = torch.tensor(())
+    mse_aggr = 0.0
+    mae_aggr = 0.0
+
+    calc_mae = nn.L1Loss()
+    calc_mse = nn.MSELoss()
 
     with torch.no_grad():
-        for x, y_true in test_dataloader:
+        for x, y_true in dataloader:
             if torch.cuda.is_available():
                 x = x.to('cuda')
                 y_true = y_true.to('cuda')
                 model = model.to('cuda')
-                metric_scores = metric_scores.to('cuda')
 
-            y_pred = model(x)
-            loss = loss_fn(y_pred, y_true.unsqueeze(1))
-            loss_aggr += loss.item()
+            y_pred = model(x).squeeze()
 
-            score = metric(y_pred, y_true).mean()
-            metric_scores = torch.cat((metric_scores, score.reshape(1)))
+            mse = calc_mse(y_true, y_pred)
+            mse_aggr += mse.item()
 
-    loss_aggr /= len(test_dataloader)
-    metric_aggr = metric_scores.sum() / len(test_dataloader)
+            mae = calc_mae(y_true, y_pred)
+            mae_aggr += mae.item()
 
-    return metric_aggr.item(), loss_aggr
+    mse_aggr /= len(dataloader)
+    mae_aggr /= len(dataloader)
+
+    print(f'MSE: {mse_aggr:.2f}\nMAE: {mae_aggr:.2f}')
+    
+    return mse_aggr, mae_aggr
