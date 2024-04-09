@@ -11,7 +11,9 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
     def __init__(self,
                  input_path,
                  key_select=None,
-                 n_mels=100):
+                 n_fft=512,
+                 n_mels=100,
+                 fs=16_000):
 
         self.input_path = input_path
 
@@ -35,13 +37,14 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
                 self.file_list.append(file)
 
         # set up transforms
-        self.resample = torchaudio.transforms.Resample(48_000, 16_000)
+        self.resample = torchaudio.transforms.Resample(48_000, fs)
         self.melspec = torchaudio.transforms.MelSpectrogram(
-            n_fft=512, n_mels=n_mels)
+            n_fft=n_fft, n_mels=n_mels)
         self.transform = torchvision.transforms.Compose([
             self.resample, self.melspec])
         
         self.n_mels = n_mels
+        self.n_time_frames = int(2 / n_fft * 6 * fs + 1)  # 6 seconds
         
     def __len__(self):
         return len(self.targets)
@@ -53,8 +56,10 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
         # sum to mono and apply transforms
         x = x.sum(0)
         x = self.transform(x).T
-        # zero-pad if less than 376 frames (6 seconds)
-        x = torch.concatenate((x, torch.zeros((376 - len(x), self.n_mels)))).T
+        # zero-pad if less than 6 seconds of frames
+        x = torch.concatenate(
+            (x, torch.zeros((self.n_time_frames - len(x), self.n_mels)))
+        ).T
         # unsqueeze data to add channel dimension
         x = x.unsqueeze(0)
 

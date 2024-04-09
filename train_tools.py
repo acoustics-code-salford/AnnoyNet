@@ -82,7 +82,8 @@ def train_model(
         train_dataloader,
         val_dataloader,
         patience=20,
-        plot=True
+        plot=True,
+        path='checkpoint.pt'
 ):
 
     train_losses = []
@@ -91,7 +92,8 @@ def train_model(
     avg_val_losses = []
     early_stopping = EarlyStopping(patience=patience,
                                    verbose=True,
-                                   delta=.00001)
+                                   delta=.00001,
+                                   path=path)
     
     if torch.cuda.is_available():
         model = model.to('cuda')
@@ -138,7 +140,7 @@ def train_model(
             last_improved -= patience
             break
     
-    model.load_state_dict(torch.load('checkpoint.pt'))
+    model.load_state_dict(torch.load(path))
 
     if plot:
         epochs = range(1, epoch+1)
