@@ -12,6 +12,7 @@ def plot_spectrogram(specgram):
               aspect="auto",
               interpolation="nearest")
 
+
 def array_chunk_split(array, chunk_size, stride=None):
     if not stride:
         stride = chunk_size
