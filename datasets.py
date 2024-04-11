@@ -34,9 +34,6 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
         # filter selected datasets by key list
         self.targets = pd.concat([metadata[i] for i in key_select])
 
-        # psychoacoustic data
-        self.psycho = pd.read_csv('psychoacoustic_metrics/psycho_metrics_processed.csv', index_col=0)
-
         # set up list of files
         self.file_list = []
         for key in key_select:
@@ -73,4 +70,4 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
         # cast target to tensor
         y = self.targets.loc[os.path.basename(filepath)].values[0]
         y = torch.tensor(y).float()
-        return x, y, self.psycho.iloc[index]
+        return x, y

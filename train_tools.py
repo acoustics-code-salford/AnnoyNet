@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+from torcheval.metrics import R2Score
 
 
 class EarlyStopping:
@@ -50,11 +51,12 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            self.trace_func(
-                'EarlyStopping counter: ',
-                f'{self.counter} out of {self.patience}',
-                end='\r'
-            )
+
+            msg = f'({self.val_loss_min:.6f} -- {val_loss:.6f}). ' + \
+                  'EarlyStopping counter: ' + \
+                  f'{self.counter} out of {self.patience}'
+            
+            self.trace_func(msg, end='\r')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -63,14 +65,11 @@ class EarlyStopping:
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
-        '''Saves model when validation loss decrease.'''
+        '''Saves model when validation loss decreases.'''
         if self.verbose:
-            self.trace_func(
-                'Validation loss decreased ',
-                f'({self.val_loss_min:.6f} --> {val_loss:.6f}). ',
-                'Saving model ...',
-                end='\r'
-            )
+            msg = f'({self.val_loss_min:.6f} --> {val_loss:.6f}). ' + \
+                  'Saving model.'
+            self.trace_func(msg, end='\r')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
@@ -132,6 +131,7 @@ def train_model(
         train_losses = []  # clear for next epoch
         val_losses = []
 
+        print(' '*100, end='\r')
         print(f'Epoch {epoch}: ', end='')
         last_improved = epoch
         
@@ -162,6 +162,7 @@ def test_model(model, dataloader):
 
     calc_mae = nn.L1Loss()
     calc_mse = nn.MSELoss()
+    calc_r2 = R2Score()
 
     with torch.no_grad():
         for x, y_true in dataloader:
@@ -178,9 +179,12 @@ def test_model(model, dataloader):
             mae = calc_mae(y_true, y_pred)
             mae_aggr += mae.item()
 
+            calc_r2.update(y_true.cpu(), y_pred.cpu())
+
     mse_aggr /= len(dataloader)
     mae_aggr /= len(dataloader)
+    r2_aggr = float(calc_r2.compute())
 
-    print(f'MSE: {mse_aggr:.2f}\nMAE: {mae_aggr:.2f}')
+    print(f'MSE: {mse_aggr:.2f}\tMAE: {mae_aggr:.2f}\tR2: {r2_aggr:.2f}')
     
-    return mse_aggr, mae_aggr
+    return mse_aggr, mae_aggr, r2_aggr
