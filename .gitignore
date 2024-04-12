@@ -17,3 +17,5 @@ runs/*
 events*
 data/*
 *.pth
+*.pdf
+results/*

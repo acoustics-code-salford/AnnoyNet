@@ -137,9 +137,9 @@ def train_model(
         
         early_stopping(val_loss, model)
         if early_stopping.early_stop:
-            print("Early stopping")
             last_improved -= patience
-            break
+            model.load_state_dict(torch.load(path))
+            return last_improved
     
     model.load_state_dict(torch.load(path))
 
@@ -151,6 +151,8 @@ def train_model(
         plt.ylabel('Loss')
         plt.axvline(last_improved, color='r', ls='--', lw=1)
         plt.legend()
+
+    return last_improved
 
 
 def test_model(model, dataloader):
