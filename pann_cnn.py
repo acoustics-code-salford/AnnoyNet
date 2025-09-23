@@ -4,22 +4,7 @@ import torch.nn.functional as F
 from torchlibrosa.stft import Spectrogram, LogmelFilterBank
 from torchlibrosa.augmentation import SpecAugmentation
 from collections import OrderedDict
-
-
-# def init_layer(layer):
-#     """Initialize a Linear or Convolutional layer. """
-#     nn.init.xavier_uniform_(layer.weight)
- 
-#     if hasattr(layer, 'bias'):
-#         if layer.bias is not None:
-#             layer.bias.data.fill_(0.)
-            
-    
-# def init_bn(bn):
-#     """Initialize a Batchnorm layer. """
-#     bn.bias.data.fill_(0.)
-#     bn.weight.data.fill_(1.)
-    
+   
 
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_shape, out_channels):
@@ -39,15 +24,6 @@ class ConvBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.pool = nn.AdaptiveAvgPool2d(out_shape)
-
-    #     self.init_weight()
-        
-    # def init_weight(self):
-    #     init_layer(self.conv1)
-    #     init_layer(self.conv2)
-    #     init_bn(self.bn1)
-    #     init_bn(self.bn2)
-
         
     def forward(self, input):
         x = input
@@ -123,6 +99,6 @@ class Cnn14(nn.Module):
         x2 = torch.mean(x, dim=2)
         x = x1 + x2
 
-        clipwise_output = self.fc_block(x)
+        output = self.fc_block(x)
 
-        return clipwise_output
+        return output
