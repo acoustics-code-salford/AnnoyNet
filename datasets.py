@@ -11,12 +11,12 @@ from pathlib import PurePath
 class MomentaryAnnoyance(torch.utils.data.Dataset):
     def __init__(self,
                  input_path,
-                 key_select=None,
                  n_fft=512,
                  hop_length=None,
                  n_mels=100,
-                 fs=16_000):
-
+                 fs=16_000,
+                 select_folds=None):
+        
         if not hop_length:
             hop_length = n_fft // 2
         self.hop_length = hop_length
@@ -28,22 +28,28 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
 
         # load metadata into dict
         metadata_filepaths = glob.glob(f'{input_path}/*/*.csv')
-        metadata = {}
+        self.metadata = {}
         for path in metadata_filepaths:
             dataset_key = PurePath(path).parts[-2]
-            metadata[dataset_key] = pd.read_csv(path, index_col=0)
+            subset_meta = pd.read_csv(path, index_col=0)
 
-        # select all dataset keys if not specified
-        key_select = metadata.keys() if not key_select else key_select
-        
+            # select data from specified folds
+            if select_folds:
+                query = ' or '.join([f'fold == {x}' for x in select_folds])
+                self.metadata[dataset_key] = subset_meta.query(query)
+            else:
+                self.metadata[dataset_key] = subset_meta
+
         # filter selected datasets by key list
-        self.targets = pd.concat([metadata[i] for i in key_select])
+        self.targets = pd.concat(
+            [self.metadata[i] for i in self.metadata.keys()])
 
         # set up list of files
-        self.file_list = []
-        for key in key_select:
-            for file in glob.glob(f'{input_path}/{key}/audio/*'):
-                self.file_list.append(file)
+        file_list = []
+        for key, value in self.metadata.items():
+            file_list.append([f'{input_path}/{key}/audio/{index}' 
+                              for index in value.index])
+        self.file_list = [y for x in file_list for y in x]
         
         self._set_up_transforms()
     
@@ -72,7 +78,7 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
             (x, torch.zeros((self.n_time_frames - len(x), self.n_mels)))
         )
         # unsqueeze data to add channel dimension
-        x = x.unsqueeze(0).unsqueeze(0)
+        x = x.unsqueeze(0)
 
         # cast target to tensor
         y = self.targets.loc[os.path.basename(filepath)].values[0]

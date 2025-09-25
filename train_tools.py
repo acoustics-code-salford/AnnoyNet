@@ -37,7 +37,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
@@ -75,12 +75,12 @@ class EarlyStopping:
 
 
 def train_model(
-        n_epochs,
-        optimiser,
         model,
-        loss_fn,
         train_dataloader,
         val_dataloader,
+        optimiser,
+        loss_fn,
+        n_epochs,
         patience=20,
         plot=True,
         path='checkpoint.pt'
@@ -95,16 +95,17 @@ def train_model(
                                    delta=.00001,
                                    path=path)
     
-    if torch.cuda.is_available():
-        model = model.to('cuda')
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+    print(f'Using device: {device}')
+    model = model.to(device)
 
     for epoch in range(1, n_epochs + 1):
         
         model.train()
         for x, y_true in train_dataloader:
-            if torch.cuda.is_available():
-                x = x.to('cuda')
-                y_true = y_true.to('cuda')
+            x = x.to(device)
+            y_true = y_true.to(device)
 
             y_pred = model(x).squeeze()  # forwards pass
             loss = loss_fn(y_pred, y_true)  # calculate loss
@@ -115,10 +116,8 @@ def train_model(
         
         model.eval()
         for x, y_true in val_dataloader:
-            
-            if torch.cuda.is_available():
-                x = x.to('cuda')
-                y_true = y_true.to('cuda')
+            x = x.to(device)
+            y_true = y_true.to(device)
 
             y_pred = model(x).squeeze() # forwards pass
             val_loss = loss_fn(y_pred, y_true) # calculate loss
@@ -157,6 +156,10 @@ def train_model(
 
 def test_model(model, dataloader):
 
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+    print(f'Using device: {device}')
+
     model.eval()
 
     mse_aggr = 0.0
@@ -168,10 +171,9 @@ def test_model(model, dataloader):
 
     with torch.no_grad():
         for x, y_true in dataloader:
-            if torch.cuda.is_available():
-                x = x.to('cuda')
-                y_true = y_true.to('cuda')
-                model = model.to('cuda')
+            x = x.to(device)
+            y_true = y_true.to(device)
+            model = model.to(device)
 
             y_pred = model(x).squeeze()
 
