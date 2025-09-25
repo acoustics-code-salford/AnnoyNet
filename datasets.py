@@ -1,11 +1,12 @@
-import os
 import glob
 import torch
+import pathlib
 import torchaudio
 import torchvision
 import torchlibrosa
 import pandas as pd
 from pathlib import PurePath
+from torchcodec.decoders import AudioDecoder
 
 
 class MomentaryAnnoyance(torch.utils.data.Dataset):
@@ -42,7 +43,8 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
 
         # filter selected datasets by key list
         self.targets = pd.concat(
-            [self.metadata[i] for i in self.metadata.keys()])
+            [self.metadata[i] for i in self.metadata.keys()]
+        ).to_dict()['Annoyance']
 
         # set up list of files
         file_list = []
@@ -51,46 +53,33 @@ class MomentaryAnnoyance(torch.utils.data.Dataset):
                               for index in value.index])
         self.file_list = [y for x in file_list for y in x]
         
-        self._set_up_transforms()
+        self._set_up_transform()
+
+        self.transformed_data = {}
+        for file in self.file_list:
+            x = AudioDecoder(file).get_all_samples().data
+            self.transformed_data[file] = self._transform(x)
     
-    def _set_up_transforms(self):
-        self.resample = torchaudio.transforms.Resample(
-            48_000, self.fs)
-        self.melspec = torchaudio.transforms.MelSpectrogram(
+    def _set_up_transform(self):
+        self._transform = torchaudio.transforms.MelSpectrogram(
             n_fft=self.n_fft, 
             hop_length=self.hop_length, 
             n_mels=self.n_mels)
-        self.transform = torchvision.transforms.Compose([
-            self.resample, self.melspec])
         
     def __len__(self):
         return len(self.targets)
 
     def __getitem__(self, index):
         filepath = self.file_list[index]
-        x, _ = torchaudio.load(filepath)
-
-        # sum to mono and apply transforms
-        x = self.transform(x.sum(0).unsqueeze(0)).squeeze()
-        
-        # zero-pad if less than 6 seconds of frames
-        x = torch.concatenate(
-            (x, torch.zeros((self.n_time_frames - len(x), self.n_mels)))
-        )
-        # unsqueeze data to add channel dimension
-        x = x.unsqueeze(0)
+        x = self.transformed_data[filepath]
 
         # cast target to tensor
-        y = self.targets.loc[os.path.basename(filepath)].values[0]
-        y = torch.tensor(y).float()
-        return x, y
+        y = self.targets[pathlib.Path(filepath).name]
+        return x.squeeze(0), torch.tensor(y)
 
 
 class MomentaryAnnoyanceLibrosa(MomentaryAnnoyance):
-    def _set_up_transforms(self):
-        resample = torchaudio.transforms.Resample(
-            48_000, self.fs)
-
+    def _set_up_transform(self):
         spectrogram = torchlibrosa.stft.Spectrogram(
             n_fft=self.n_fft, 
             hop_length=self.hop_length, 
@@ -110,5 +99,4 @@ class MomentaryAnnoyanceLibrosa(MomentaryAnnoyance):
             amin=1e-10,
             freeze_parameters=True)
         
-        self.transform = torchvision.transforms.Compose([
-            resample, spectrogram, logmel])
+        self._transform = torchvision.transforms.Compose([spectrogram, logmel])
