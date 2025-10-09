@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from datasets import MomentaryAnnoyance
+from annoyance_datasets import MomentaryAnnoyance
 
 def _w_s(s, n_5):
     if s > 1.75:
